@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Calendar, 
-  AlertCircle,
   LogOut,
   BookOpen,
-  BarChart3,
   MessageCircle,
   Mail
 } from 'lucide-react'
@@ -49,7 +47,7 @@ export function AdminDashboard() {
       setLoading(true)
 
       // Use service role or bypass RLS for admin queries
-      const { data: { session } } = await supabase.auth.getSession()
+      await supabase.auth.getSession()
       
       // Fetch all data in parallel with proper error handling
       const [bookingsRes, queriesRes, contactsRes, articlesRes, viewsRes] = await Promise.allSettled([

@@ -7,7 +7,7 @@ import { useAdmin } from '../contexts/AdminContext'
 import { supabase } from '../lib/supabase'
 
 export function Profile() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const { isAdmin } = useAdmin()
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
