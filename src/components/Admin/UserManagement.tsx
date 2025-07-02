@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Mail, Calendar, Shield, Search, Filter, MoreVertical, Ban, CheckCircle } from 'lucide-react'
+import { Users, Mail, Calendar, Shield, Search, Filter, MoreVertical, Ban } from 'lucide-react'
 import { Button } from '../UI/Button'
 import { LoadingSpinner } from '../UI/LoadingSpinner'
 import { supabase } from '../../lib/supabase'
