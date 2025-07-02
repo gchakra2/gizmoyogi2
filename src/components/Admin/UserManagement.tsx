@@ -33,57 +33,9 @@ export function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-
-      // Fetch users from auth.users (requires service role or admin access)
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-      
-      if (authError) {
-        console.error('Error fetching auth users:', authError)
-        // Fallback: try to get users from bookings and queries
-        await fetchUsersFromBookings()
-        return
-      }
-
-      // Get admin users
-      const { data: adminUsers } = await supabase
-        .from('admin_users')
-        .select('email, role')
-
-      const adminEmails = new Set(adminUsers?.map(admin => admin.email) || [])
-
-      // Get user statistics
-      const usersWithStats = await Promise.all(
-        authUsers.users.map(async (user) => {
-          // Get booking count
-          const { count: bookingsCount } = await supabase
-            .from('bookings')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-
-          // Get queries count
-          const { count: queriesCount } = await supabase
-            .from('yoga_queries')
-            .select('*', { count: 'exact', head: true })
-            .eq('email', user.email)
-
-          return {
-            id: user.id,
-            email: user.email || '',
-            created_at: user.created_at,
-            last_sign_in_at: user.last_sign_in_at,
-            user_metadata: user.user_metadata,
-            bookings_count: bookingsCount || 0,
-            queries_count: queriesCount || 0,
-            is_admin: adminEmails.has(user.email || '')
-          }
-        })
-      )
-
-      setUsers(usersWithStats)
+      await fetchUsersFromBookings()
     } catch (error) {
       console.error('Error fetching users:', error)
-      // Fallback method
-      await fetchUsersFromBookings()
     } finally {
       setLoading(false)
     }
@@ -103,6 +55,13 @@ export function UserManagement() {
         .select('email, name, created_at')
         .order('created_at', { ascending: false })
 
+      // Get admin users
+      const { data: adminUsers } = await supabase
+        .from('admin_users')
+        .select('email, role')
+
+      const adminEmails = new Set(adminUsers?.map(admin => admin.email) || [])
+
       // Combine and deduplicate users
       const userMap = new Map()
 
@@ -117,7 +76,7 @@ export function UserManagement() {
             },
             bookings_count: 0,
             queries_count: 0,
-            is_admin: false
+            is_admin: adminEmails.has(booking.email)
           })
         }
       })
@@ -133,7 +92,7 @@ export function UserManagement() {
             },
             bookings_count: 0,
             queries_count: 0,
-            is_admin: false
+            is_admin: adminEmails.has(query.email)
           })
         }
       })
