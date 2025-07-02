@@ -5,11 +5,14 @@ import {
   LogOut,
   BookOpen,
   MessageCircle,
-  Mail
+  Mail,
+  Users
 } from 'lucide-react'
 import { Button } from '../components/UI/Button'
 import { LoadingSpinner } from '../components/UI/LoadingSpinner'
 import { ArticleManagement } from '../components/Admin/ArticleManagement'
+import { BookingManagement } from '../components/Admin/BookingManagement'
+import { UserManagement } from '../components/Admin/UserManagement'
 import { useAdmin } from '../contexts/AdminContext'
 import { supabase } from '../lib/supabase'
 
@@ -20,11 +23,13 @@ interface DashboardStats {
   totalArticles: number
   publishedArticles: number
   totalViews: number
+  totalUsers: number
   recentBookings: any[]
   pendingQueries: any[]
   newContacts: any[]
   allQueries: any[]
   allContacts: any[]
+  allBookings: any[]
 }
 
 export function AdminDashboard() {
@@ -92,11 +97,18 @@ export function AdminDashboard() {
       const pendingQueries = queries.filter(q => q.status === 'pending')
       const newContacts = contacts.filter(c => c.status === 'new')
 
+      // Get unique users count from bookings and queries
+      const uniqueEmails = new Set([
+        ...bookings.map(b => b.email),
+        ...queries.map(q => q.email)
+      ])
+
       console.log('Filtered data:', {
         pendingQueries: pendingQueries.length,
         newContacts: newContacts.length,
         totalQueries: queries.length,
-        totalContacts: contacts.length
+        totalContacts: contacts.length,
+        totalUsers: uniqueEmails.size
       })
 
       setStats({
@@ -106,11 +118,13 @@ export function AdminDashboard() {
         totalArticles: articles.length,
         publishedArticles: articles.filter(a => a.status === 'published').length,
         totalViews: views.length,
+        totalUsers: uniqueEmails.size,
         recentBookings: bookings.slice(0, 5),
         pendingQueries: pendingQueries.slice(0, 10),
         newContacts: newContacts.slice(0, 10),
         allQueries: queries,
-        allContacts: contacts
+        allContacts: contacts,
+        allBookings: bookings
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -189,6 +203,12 @@ export function AdminDashboard() {
 
   const statCards = [
     {
+      title: 'Total Users',
+      value: stats.totalUsers,
+      icon: <Users className="w-8 h-8 text-purple-600" />,
+      color: 'bg-purple-50 border-purple-200'
+    },
+    {
       title: 'Total Bookings',
       value: stats.totalBookings,
       icon: <Calendar className="w-8 h-8 text-blue-600" />,
@@ -197,14 +217,14 @@ export function AdminDashboard() {
     {
       title: 'Yoga Queries',
       value: stats.totalQueries,
-      icon: <MessageCircle className="w-8 h-8 text-purple-600" />,
-      color: 'bg-purple-50 border-purple-200'
+      icon: <MessageCircle className="w-8 h-8 text-green-600" />,
+      color: 'bg-green-50 border-green-200'
     },
     {
       title: 'Contact Messages',
       value: stats.totalContacts,
-      icon: <Mail className="w-8 h-8 text-green-600" />,
-      color: 'bg-green-50 border-green-200'
+      icon: <Mail className="w-8 h-8 text-orange-600" />,
+      color: 'bg-orange-50 border-orange-200'
     },
     {
       title: 'Published Articles',
@@ -256,8 +276,9 @@ export function AdminDashboard() {
           <nav className="flex space-x-8">
             {[
               { id: 'overview', label: 'Overview' },
-              { id: 'articles', label: 'Articles' },
+              { id: 'users', label: 'Users' },
               { id: 'bookings', label: 'Bookings' },
+              { id: 'articles', label: 'Articles' },
               { id: 'queries', label: 'Yoga Queries' },
               { id: 'contacts', label: 'Contact Messages' }
             ].map((tab) => (
@@ -292,7 +313,7 @@ export function AdminDashboard() {
         {activeTab === 'overview' && (
           <div className="space-y-8">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {statCards.map((stat, index) => (
                 <div key={index} className={`card p-6 border-2 ${stat.color}`}>
                   <div className="flex items-center justify-between">
@@ -329,6 +350,14 @@ export function AdminDashboard() {
                   ) : (
                     <p className="text-gray-500 text-sm">No recent bookings</p>
                   )}
+                  {stats.totalBookings > 5 && (
+                    <button
+                      onClick={() => setActiveTab('bookings')}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      View all {stats.totalBookings} bookings →
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -348,6 +377,14 @@ export function AdminDashboard() {
                     ))
                   ) : (
                     <p className="text-gray-500 text-sm">No pending queries</p>
+                  )}
+                  {stats.pendingQueries.length > 3 && (
+                    <button
+                      onClick={() => setActiveTab('queries')}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      View all pending queries →
+                    </button>
                   )}
                 </div>
               </div>
@@ -369,78 +406,23 @@ export function AdminDashboard() {
                   ) : (
                     <p className="text-gray-500 text-sm">No new contact messages</p>
                   )}
+                  {stats.newContacts.length > 3 && (
+                    <button
+                      onClick={() => setActiveTab('contacts')}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      View all contacts →
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {activeTab === 'users' && <UserManagement />}
+        {activeTab === 'bookings' && <BookingManagement />}
         {activeTab === 'articles' && <ArticleManagement />}
-
-        {activeTab === 'bookings' && (
-          <div className="card p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Class Bookings</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Class
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Instructor
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Time
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date Booked
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {stats.recentBookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {booking.first_name} {booking.last_name}
-                          </div>
-                          <div className="text-sm text-gray-500">{booking.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {booking.class_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {booking.instructor}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {booking.class_time}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(booking.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {activeTab === 'queries' && (
           <div className="card p-6">
